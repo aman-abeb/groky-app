@@ -1,72 +1,122 @@
 # Groky
 
-Voice remote for a robot dog and a robot arm, built on Grok Voice. Made for the Grok Hackathon at Ctrl+Alt Museum, Pavia (Nov 2026).
+Talk to a robot dog and a robot arm and watch them do it. Grok listens, decides, moves the robots, looks through the
+cameras to check its own work, and tells you how it went.
 
-You talk to the phone, Grok decides what to do, the app calls the robot bridges, and Grok tells you how it went. The log screen keeps track of every action with success rate and latency.
+Built at the Grok Hackathon, Ctrl+Alt Museum, Pavia (4-5 Nov 2026).
+
+## The idea
+
+Controlling a robot usually means a laptop, a terminal and someone who knows the API. We wanted anyone walking into
+the museum to pick up a tablet and say _"put the red cube in the box"_ or _"dog, come here and sit"_, and have it
+just work.
+
+Three things make that possible:
+
+- **Voice agent.** Grok Voice runs the conversation in real time and calls robot actions as tools. One agent drives
+  both robots, so a single sentence can involve the dog and the arm.
+- **Vision in the loop.** Grok can take a picture through any camera (tablet, robot, overhead) and reason about it.
+  It looks before acting on something it hasn't seen, and after a pick it checks that the object actually landed
+  where it should. If not, it says so and offers to retry.
+- **You can see what it's thinking.** Every step shows up live: what it heard, which tool it chose and with what
+  arguments, how long the robot took, what the camera saw, what it answered. No black box.
+
+## Demo
+
+1. "What do you see?" - Grok looks through the tablet camera and describes the table.
+2. "Put the red cube in the box." - arm picks it up, places it, then Grok checks the camera and confirms.
+3. "Dog, walk forward a meter and wave." - two tool calls in a row, dog card shows it running.
+4. "Stop!" - everything halts, Grok talks after.
+5. Open History, tap an earlier command to run it again.
+
+## How it works
+
+```
+   you ──voice──▶  Grok Voice (realtime)  ──tool call──▶  robot bridge (HTTP)  ──▶  dog / arm
+    ▲                    │      ▲                                 │
+    │                    │      └──────── result ◀────────────────┘
+    │                    ▼
+    │              camera_look ──frame──▶ Grok vision ──▶ "the cube is in the box"
+    │                    │
+    └────── speech ◀─────┘
+```
+
+The app holds the Grok session, plays the audio and runs the tools. Each robot sits behind a small HTTP bridge on
+its own laptop, so the app doesn't care what SDK the hardware uses.
+
+Grok sees one flat tool list: `dog_walk`, `dog_turn`, `dog_pose`, `arm_goto`, `arm_grip`, `arm_pick_place`,
+`arm_check`, `camera_look` and `stop`.
+
+## The app
+
+| tab | what it's for |
+| --- | --- |
+| Talk | the orb, live transcript, camera and the agent's activity timeline side by side |
+| Cameras | big camera view plus "Show Grok", next to the activity timeline |
+| Robots | status of each robot: online / simulated / offline, battery, latency, success rate, recent actions, stop |
+| History | everything you've asked, searchable, pin favourites, tap to run again |
+
+Light and dark theme in Settings. The camera can be switched off from the camera panel; Grok is told it's off
+instead of guessing.
+
+## Robot bridge
+
+Each robot laptop runs a tiny HTTP server:
+
+- `GET /health` - 200 and some JSON (battery, pose...) when the robot is connected
+- `POST /tools/<name>` - JSON args in, JSON result out, ideally `{ "ok": true, ... }`
+- `POST /tools/stop` - must always work and return fast
+- `GET /camera.jpg` - latest frame (optional, shows up as a camera automatically)
+
+Requests carry `X-Bridge-Key` if one is set. With no bridge URL the robot is simulated, so the whole app can be
+demoed without hardware. Tool names and arguments are in `src/devices/tools.ts`.
 
 ## Run it
 
-Needs Node 20+ and Expo Go on an Android or iOS device on the same wifi as your laptop.
+Needs Node 20+ and Expo Go on the tablet.
 
 ```sh
 npm install
-cp .env.example .env   # fill in at least one of TOKEN_URL / XAI_API_KEY
+cp .env.example .env   # add the xAI key
 npx expo start
 ```
 
-Scan the QR code with Expo Go. If the venue wifi blocks device-to-device traffic, use `npx expo start --tunnel`.
+Scan the QR code with Expo Go. On venue wifi use `npm run tunnel`, or plug the tablet in over USB and run
+`../tablet.sh` from the repo's parent folder (see `COMMANDS.md` there).
 
-## Config (.env)
+### .env
 
 | var | what |
 | --- | --- |
-| `EXPO_PUBLIC_TOKEN_URL` | our backend endpoint that mints a short-lived Grok Voice token (`POST https://api.x.ai/v1/realtime/client_secrets`). Use this for anything shown to other people. |
-| `EXPO_PUBLIC_XAI_API_KEY` | quick dev fallback. Gets bundled into the app, so keep it on our own devices. |
-| `EXPO_PUBLIC_DOG_URL`, `EXPO_PUBLIC_ARM_URL` | robot bridges, e.g. `http://192.168.1.20:8000`. Empty = simulated robot. |
-| `EXPO_PUBLIC_BRIDGE_KEY` | sent as `X-Bridge-Key` to the bridges |
-| `EXPO_PUBLIC_CAMERAS` | extra cameras, `Name=url,Name=url`. Each url returns one JPEG. |
+| `EXPO_PUBLIC_XAI_API_KEY` | xAI key. Gets bundled into the app, so only on our own devices |
+| `EXPO_PUBLIC_TOKEN_URL` | optional backend that mints short-lived Grok Voice tokens, used instead of the key |
+| `EXPO_PUBLIC_DOG_URL`, `EXPO_PUBLIC_ARM_URL` | robot bridges, e.g. `http://192.168.1.20:8000`. Empty = simulated |
+| `EXPO_PUBLIC_BRIDGE_KEY` | sent as `X-Bridge-Key` |
+| `EXPO_PUBLIC_CAMERAS` | extra cameras, `Name=url,Name=url`, each url returns a JPEG |
+| `EXPO_PUBLIC_GROK_VOICE` | voice, default `eve` |
 | `EXPO_PUBLIC_GROK_VISION_MODEL` | model for camera questions, default `grok-4.7` |
-| `EXPO_PUBLIC_VISION_URL` | optional backend proxy for vision, same body as `POST /v1/responses` |
 
-Restart with `npx expo start -c` after editing `.env`.
+Restart with `npx expo start -c` after changing `.env`.
 
-## Bridge contract
+A phone running the "IP Webcam" Android app works as an extra camera: `Overhead=http://<phone-ip>:8080/shot.jpg`.
 
-Each robot laptop runs a small HTTP server:
-
-- `GET /health` -> 200 when the robot is connected
-- `POST /tools/<name>` with JSON args -> JSON result, ideally `{ "ok": true, ... }`
-- `POST /tools/stop` must always work and return fast
-- `GET /camera.jpg` -> latest frame as JPEG (optional, shows up as a camera automatically)
-
-Tool names and args live in `src/devices/index.ts`. Grok sees them as `dog_walk`, `arm_pick_place`, etc.
-
-## Cameras
-
-The Talk screen (tablet) and the Cameras tab show a live feed: the tablet's own camera, each bridge's `/camera.jpg`,
-and anything in `EXPO_PUBLIC_CAMERAS`. A phone running the Android "IP Webcam" app makes a quick external camera:
-`Overhead=http://<phone-ip>:8080/shot.jpg`.
-
-"Show Grok" sends the current frame to Grok vision and tells the voice agent what it saw. Grok can also look by itself
-through the `camera_look` tool, e.g. to check a pick worked. Every step (heard, decided, robot call, camera, answer)
-shows up in the activity panel with timings.
-
-## Layout
+## Code
 
 ```
-App.tsx              shell: sidebar, top bar, tab switching
+App.tsx              shell: sidebar, top bar, tabs
 src/screens/         Talk, Cameras, Robots, History
-src/components/      orb, camera panel, activity timeline, log, sidebar, ...
+src/components/      orb, camera panel, activity timeline, log, sidebar...
 src/hooks/           useVoice, useCamera, useDevices, useHistory
-src/voice/           Grok realtime session, prompt, audio helpers
-src/devices/         tool definitions, bridge client, simulator
-src/lib/             config, vision, cameras, small helpers
+src/voice/           Grok realtime session, prompt, audio
+src/devices/         robot tools, bridge client, simulator
+src/lib/             config, vision, cameras
 ```
 
-`npm run lint`, `npm run typecheck` and `npm run format` before pushing.
+`npm run lint`, `npm run typecheck`, `npm run format` before pushing.
 
 ## Known limits
 
-- Replies are played once fully received, not streamed. Fine for short answers.
-- Mic is ignored while Groky is talking, so you can't interrupt by voice. Use the stop button.
-- Response format of the token endpoint isn't documented; `session.ts` accepts `value`, `client_secret.value` or `token`.
+- Replies play once fully received, not streamed. Fine for short answers.
+- The mic is ignored while Groky talks, so you can't interrupt by voice. Use the stop button.
+- The token endpoint's response format isn't documented; `src/voice/token.ts` accepts the likely shapes.
+- Tool list is a first guess until we see the real hardware.
