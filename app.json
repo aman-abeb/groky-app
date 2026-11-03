@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Groky",
+    "slug": "groky-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Groky listens so you can talk to the robots."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#04112b",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Groky listens so you can talk to the robots."
+        }
+      ],
+      "expo-font",
+      "expo-asset"
+    ],
+    "backgroundColor": "#04112b"
+  }
+}
