@@ -9,7 +9,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Groky listens so you can talk to the robots."
+        "NSMicrophoneUsageDescription": "Groky listens so you can talk to the robots.",
+        "NSCameraUsageDescription": "Groky uses the camera so Grok can see what the robots see."
       }
     },
     "android": {
@@ -32,7 +33,14 @@
         }
       ],
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Groky uses the camera so Grok can see what the robots see.",
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "backgroundColor": "#04112b"
   }

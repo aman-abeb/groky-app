@@ -1,6 +1,6 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import env from '../config';
+import env from '../lib/config';
 import { devices } from '../devices';
 import { Colors, Mode, useStyles, useTheme } from '../theme';
 

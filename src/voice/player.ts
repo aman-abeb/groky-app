@@ -1,6 +1,6 @@
 import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
-import { SAMPLE_RATE } from '../config';
+import { SAMPLE_RATE } from '../lib/config';
 import { wav } from './pcm';
 
 // Grok streams audio in small base64 pieces. We buffer one reply and play it as a wav.

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { Line } from '../voice/session';
+import type { Line } from '../voice/types';
 import { Colors, font, useStyles, useTheme } from '../theme';
 
 type Props = { lines: Line[]; canSend: boolean; onSend: (t: string) => void };
@@ -61,7 +61,6 @@ export default function Log({ lines, canSend, onSend }: Props) {
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
-  const { c } = useTheme();
   const s = useStyles(makeStyles);
   return (
     <View style={s.stat}>

@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import type { Status } from '../voice/session';
+import type { Status } from '../voice/types';
 import { Colors, useStyles, useTheme } from '../theme';
 
 const SIZE = 150;
@@ -20,9 +20,9 @@ type Props = { status: Status; level: Animated.Value };
 export default function Orb({ status, level }: Props) {
   const { c } = useTheme();
   const s = useStyles(makeStyles);
-  const breathe = useRef(new Animated.Value(0)).current;
-  const blink = useRef(new Animated.Value(1)).current;
-  const look = useRef(new Animated.Value(0)).current;
+  const breathe = useState(() => new Animated.Value(0))[0];
+  const blink = useState(() => new Animated.Value(1))[0];
+  const look = useState(() => new Animated.Value(0))[0];
 
   useEffect(() => {
     const loop = Animated.loop(
